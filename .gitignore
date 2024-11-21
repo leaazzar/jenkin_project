@@ -1,15 +1,8 @@
-# Ignore virtual environment
 venv/
-
-# Ignore Python cache files
 __pycache__/
 *.pyc
 *.pyo
-
-# Ignore IDE-specific files (e.g., VSCode, PyCharm)
-.idea/
-.vscode/
-
-# Ignore logs and temporary files
 *.log
-*.tmp
+coverage.xml
+bandit_report.xml
+pytest_report.xml

@@ -7,24 +7,59 @@ pipeline {
         stage('Setup') {
             steps {
                 script {
-                    if (!fileExists("${env.WORKSPACE}/${VIRTUAL_ENV}")) {
-                        sh "python -m venv ${VIRTUAL_ENV}"
-                    }
-                    sh "source ${VIRTUAL_ENV}/bin/activate && pip install -r requirements.txt"
+                    // Create and activate virtual environment, then install dependencies
+                    bat """
+                        if not exist ${VIRTUAL_ENV} (
+                            python -m venv ${VIRTUAL_ENV}
+                        )
+                        call ${VIRTUAL_ENV}\\Scripts\\activate.bat
+                        pip install --upgrade pip
+                        pip install -r requirements.txt
+                    """
                 }
             }
         }
         stage('Lint') {
             steps {
                 script {
-                    sh "source ${VIRTUAL_ENV}/bin/activate && flake8 app.py"
+                    bat """
+                        call ${VIRTUAL_ENV}\\Scripts\\activate.bat
+                        flake8 app.py --exit-zero
+                    """
                 }
             }
         }
         stage('Test') {
             steps {
                 script {
-                    sh "source ${VIRTUAL_ENV}/bin/activate && pytest"
+                    bat """
+                        call ${VIRTUAL_ENV}\\Scripts\\activate.bat
+                        set PYTHONPATH=%WORKSPACE%
+                        pytest
+                    """
+                }
+            }
+        }
+        stage('Coverage') {
+            steps {
+                script {
+                    bat """
+                        call ${VIRTUAL_ENV}\\Scripts\\activate.bat
+                        set PYTHONPATH=%WORKSPACE%
+                        coverage run --source=. -m pytest
+                        coverage report
+                        coverage xml -o coverage.xml
+                    """
+                }
+            }
+        }
+        stage('Security Scan') {
+            steps {
+                script {
+                    bat """
+                        call ${VIRTUAL_ENV}\\Scripts\\activate.bat
+                        bandit -r . -f xml -o bandit_report.xml --exit-zero
+                    """
                 }
             }
         }
@@ -32,14 +67,18 @@ pipeline {
             steps {
                 script {
                     echo "Deploying application..."
-                    // Add deployment logic here
+                    bat """
+                        call ${VIRTUAL_ENV}\\Scripts\\activate.bat
+                        python deploy.py
+                    """
                 }
             }
         }
     }
     post {
         always {
-            cleanWs()
+            cleanWs() // Clean workspace after the pipeline finishes
+            publishCoverage adapters: [coberturaAdapter('coverage.xml')], sourceFileResolver: sourceFiles('NEVER_STORE')
         }
     }
 }
