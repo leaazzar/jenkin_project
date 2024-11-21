@@ -7,7 +7,6 @@ pipeline {
         stage('Setup') {
             steps {
                 script {
-                    // Create and activate virtual environment, then install dependencies
                     bat """
                         if not exist ${VIRTUAL_ENV} (
                             python -m venv ${VIRTUAL_ENV}
@@ -77,8 +76,13 @@ pipeline {
     }
     post {
         always {
-            cleanWs() // Clean workspace after the pipeline finishes
-            publishCoverage adapters: [coberturaAdapter('coverage.xml')], sourceFileResolver: sourceFiles('NEVER_STORE')
+            cleanWs() // Clean workspace
+        }
+        success {
+            echo "Build succeeded!"
+        }
+        failure {
+            echo "Build failed. Please check the logs."
         }
     }
 }
